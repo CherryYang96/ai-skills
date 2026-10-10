@@ -6,6 +6,9 @@ fetch_data.py - 通用看板数据拉取脚本
   python3 fetch_data.py --config ~/.openclaw/dashboard-reporter/reports/my_report.json
   python3 fetch_data.py --config my_report.json --date 2026-03-24
 
+  # 演示模式（离线，不需要内网与 cookie，用随仓库提供的样例数据跑通全链路）
+  python3 fetch_data.py --config config.example.json --from-file sample_data.example.json
+
 输出：JSON 数据写入 /tmp/dashboard_data_<name>.json
 """
 
@@ -50,13 +53,13 @@ def do_post(host: str, path: str, body: dict, headers: dict) -> dict:
 # ─── 平台适配器 ────────────────────────────────────────────────────────────────
 
 def fetch_ocrm(source_cfg: dict, cookie_val: str, date_ts: int) -> dict:
-    """ocrm.sankuai.com OLAP Query 适配器"""
+    """dashboard.example.com OLAP Query 适配器"""
     base_url = source_cfg["base_url"]
     host = base_url.replace("https://", "").replace("http://", "").split("/")[0]
     
     headers = {
         "Content-Type": "application/json",
-        "Cookie": f"xianfu_waimai_ssoid={cookie_val}",
+        "Cookie": f"<SSO_COOKIE_NAME>={cookie_val}",
         "X-Requested-With": "XMLHttpRequest",
         "M-UserContext": "eyJsb2NhbGUiOiJ6aCIsInRpbWVab25lIjoiQXNpYS9TaGFuZ2hhaSJ9",
     }
@@ -116,6 +119,8 @@ def main():
     parser.add_argument("--config", required=True, help="报告配置文件路径")
     parser.add_argument("--date", help="数据日期 YYYY-MM-DD（默认昨天）")
     parser.add_argument("--output", help="输出文件路径（默认 /tmp/dashboard_data_<name>.json）")
+    parser.add_argument("--from-file", dest="from_file",
+                        help="演示模式：直接读取本地样例数据 JSON，不联网、不需要 cookie")
     args = parser.parse_args()
 
     # 加载配置
@@ -137,6 +142,33 @@ def main():
     
     date_ts = int(target_date.timestamp() * 1000)
     date_iso = target_date.strftime("%Y-%m-%d")
+
+    # ─── 演示模式：本地样例数据，跳过 cookie 与网络 ──────────────────────────────
+    if args.from_file:
+        sample_path = Path(args.from_file).expanduser()
+        if not sample_path.exists():
+            print(f"[ALERT] 样例数据文件不存在: {sample_path}", file=sys.stderr)
+            sys.exit(1)
+        with open(sample_path) as f:
+            sample = json.load(f)
+        # 允许两种写法：完整 payload（含 data/date）或只给 data 内容
+        if isinstance(sample, dict) and "data" in sample:
+            payload = dict(sample)
+            payload.setdefault("report_name", config["name"])
+            payload.setdefault("date", date_iso)
+            payload.setdefault("date_ts", date_ts)
+        else:
+            payload = {
+                "report_name": config["name"],
+                "date": date_iso,
+                "date_ts": date_ts,
+                "data": sample,
+            }
+        output_file = args.output or f"/tmp/dashboard_data_{report_name}.json"
+        with open(output_file, "w") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        print(f"[DATA_READY] {output_file} (demo/offline)")
+        return
 
     # 加载 cookie
     cookie_file = Path(source_cfg["cookie_file"]).expanduser()

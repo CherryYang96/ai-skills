@@ -59,16 +59,40 @@ cp -r sharp-analyst ~/.openclaw/skills/
 cp -r dashboard-reporter ~/.openclaw/skills/
 ```
 
-也可以在 [Friday Skill 广场](https://skills.sankuai.com) 搜索安装。
+> 目录名与 `SKILL.md` 里的 `name:` 字段保持一致，便于加载器按目录名查找：
+> `cyber-maomao` / `sharp-analyst`（原名 good-analyst，已对齐） / `dashboard-reporter`。
+
+---
+
+## 🚦 环境依赖（装之前先看这张表）
+
+| Skill | 依赖 | 外部环境能否直接用 |
+|-------|------|------------------|
+| **Cyber-MaoMao** | 无（纯 Markdown + examples） | ✅ 可以，任何支持 SKILL.md 的加载器 |
+| **分析师炼金术** | 无（纯 Markdown + references） | ✅ 可以 |
+| **Dashboard Reporter** | 数据接口 + 登录 cookie；原始实例还依赖内网 SSO、墨客 subagent、大象群 CLI | ⚠️ 通用骨架可跑，原始内部实例不可复现 |
+
+Dashboard Reporter 的**离线演示**（不需要任何内网权限，只要 Python 3）：
+
+```bash
+cd dashboard-reporter/scripts
+python3 fetch_data.py    --config config.example.json --from-file sample_data.example.json --output /tmp/demo_data.json
+python3 render_report.py --config config.example.json --data /tmp/demo_data.json --output /tmp/demo_report.md
+cat /tmp/demo_report.md
+```
+
+更多部署说明见 [`dashboard-reporter/README.md`](./dashboard-reporter/README.md)。
+
+也可以在 [Friday Skill 广场](https://skills.example.com) 搜索安装（仅内网可访问）。
 
 ---
 
 ## 👤 作者
 
-**yangchengling** — 战略分析 × AI 实践者
+**<YOUR_MIS_ACCOUNT>** — 战略分析 × AI 实践者
 
 ---
 
 ## License
 
-MIT
+MIT（见 [LICENSE](./LICENSE)）

@@ -1,0 +1,30 @@
+{
+  "_comment": "演示用样例数据（虚构，仅用于跑通渲染链路，不含任何真实业务数据）。",
+  "_usage": "python3 fetch_data.py --config config.example.json --from-file sample_data.example.json",
+  "overview": [
+    {
+      "gtv": 18460000,
+      "orders": 412000,
+      "avg_order_value": 44.81,
+      "active_users": 386000,
+      "new_users": 21500,
+      "visitor_uv": 1250000,
+      "visit_to_order_rate": 0.3296,
+      "repurchase_rate": 0.412,
+      "merchant_count": 58400,
+      "on_time_rate": 0.9812,
+      "avg_delivery_dur": 31.4,
+      "subsidy_amount": 2360000,
+      "roi": 2.28,
+      "gtv_last_day_rate": 0.031,
+      "orders_last_day_rate": 0.018,
+      "active_users_last_day_rate": -0.006,
+      "visit_to_order_rate_last_day_rate": 0.012,
+      "repurchase_rate_last_day_rate": 0.011,
+      "on_time_rate_last_day_rate": -0.002,
+      "avg_delivery_dur_last_day_rate": 0.043,
+      "gtv_last_week_rate": 0.086,
+      "orders_last_week_rate": 0.052
+    }
+  ]
+}

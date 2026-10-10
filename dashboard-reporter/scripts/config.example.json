@@ -1,0 +1,26 @@
+{
+  "name": "示例看板日报",
+  "data_source": {
+    "platform": "ocrm",
+    "base_url": "https://dashboard.example.com",
+    "cookie_domain": "dashboard.example.com",
+    "cookie_file": "~/.openclaw/dashboard-reporter/cookies/dashboard.example.com.txt",
+    "queries": [
+      {
+        "name": "overview",
+        "endpoint": "/olap/query",
+        "body": {
+          "注释": "把看板的 OLAP 请求体粘贴到这里，用 __DATE__ 替换日期时间戳",
+          "date": "__DATE__"
+        }
+      }
+    ]
+  },
+  "template": "default",
+  "schedule": "0 3 * * *",
+  "delivery": {
+    "test_gid": "",
+    "prod_gid": "",
+    "notify_uid": ""
+  }
+}

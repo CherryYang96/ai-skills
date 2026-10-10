@@ -3,12 +3,12 @@
 # 用法：./fetch_cookie.sh <domain> [mis_account]
 # 输出：cookie 值写入 ~/.openclaw/dashboard-reporter/cookies/<domain>.txt
 #
-# 支持域名：ocrm.sankuai.com, data.sankuai.com, 等 *.sankuai.com 域名
+# 支持域名：dashboard.example.com, data.example.com, 等 *.example.com 域名
 
 set -euo pipefail
 
 DOMAIN="${1:-}"
-MIS="${2:-yangchengling}"
+MIS="${2:-<YOUR_MIS_ACCOUNT>}"
 COOKIE_DIR="${HOME}/.openclaw/dashboard-reporter/cookies"
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -26,7 +26,7 @@ check_cookie_valid() {
   # 用 curl 访问域名首页，检查是否被重定向到 SSO
   local http_code
   http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Cookie: xianfu_waimai_ssoid=${cookie_val}" \
+    -H "Cookie: <SSO_COOKIE_NAME>=${cookie_val}" \
     --max-time 5 \
     "https://${DOMAIN}/" 2>/dev/null || echo "000")
   [[ "$http_code" != "302" && "$http_code" != "401" && "$http_code" != "000" ]]
@@ -43,7 +43,7 @@ fi
 
 # 2. 执行 SSO 登录
 echo "🔐 执行 SSO 登录（mis: $MIS）..."
-SSO_SCRIPT="/app/skills/room-booking-helper/scripts/sso-login.sh"
+SSO_SCRIPT="<内网>/sso-login.sh"
 if [[ ! -f "$SSO_SCRIPT" ]]; then
   echo "❌ 找不到 SSO 登录脚本: $SSO_SCRIPT" >&2
   exit 1
@@ -86,7 +86,7 @@ def on_message(ws, message):
         for c in cookies:
             if domain in c.get("domain", ""):
                 # 优先找常见 ssoid 字段
-                if c["name"] in ("xianfu_waimai_ssoid", "ssoid", "sso_token", "SSOID"):
+                if c["name"] in ("<SSO_COOKIE_NAME>", "ssoid", "sso_token", "SSOID"):
                     result_cookies.append(c)
         done.set()
 

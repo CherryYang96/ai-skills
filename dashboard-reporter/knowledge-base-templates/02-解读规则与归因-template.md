@@ -246,7 +246,7 @@ Step 2: 流量（DAU = fin_usr_num）有没有同步增长？
     │     → 尝鲜用户大涨 = 可能有活动拉新，需观察留存
     │   Step 4a: 流量是什么驱动的？
     │     → 外部因素：天气指数 weather_index_value 明显为正？（天气利好）
-    │     → 内部因素：美补率↑（net_mt_disc_rate↑）or 商补率↑（poi_disc_rate↑）？
+    │     → 内部因素：平台补贴率↑（net_mt_disc_rate↑）or 商补率↑（poi_disc_rate↑）？
     │     → 结论模板：「流量增长主要由[天气/美补/商补]驱动，用户结构[优化/未优化]」
     │
     └─ 【流量没涨，或涨幅远小于订单涨幅】
@@ -272,6 +272,6 @@ Step 2: 流量（DAU = fin_usr_num）有没有同步增长？
 | 成熟用户订单 | `user_levels['外卖餐饮成熟用户'].fin_ord_num` |
 | 尝鲜用户订单 | `user_levels['外卖餐饮尝鲜用户'].fin_ord_num` |
 | 天气指数 | `hz.weather_index_value`, `hz.weather_index_value_last_week_rate` |
-| 美补率 | `hz.net_mt_disc_rate`, `hz.net_mt_disc_rate_last_day_rate` |
+| 平台补贴率 | `hz.net_mt_disc_rate`, `hz.net_mt_disc_rate_last_day_rate` |
 | 商补率 | `hz.poi_disc_rate`, `hz.poi_disc_rate_last_day_rate` |
 | 老客订单量 | `user_types['餐饮老客'].fin_ord_num` |

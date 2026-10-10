@@ -2,15 +2,15 @@
 
 ## 支持的平台
 
-### 1. ocrm.sankuai.com（外卖直营数据）
+### 1. dashboard.example.com（外卖直营数据）
 
-**Cookie 域**：`ocrm.sankuai.com`  
-**Cookie 字段**：`xianfu_waimai_ssoid`  
-**数据接口**：`POST https://data.ocrm.sankuai.com/olap/query`
+**Cookie 域**：`dashboard.example.com`  
+**Cookie 字段**：`<SSO_COOKIE_NAME>`  
+**数据接口**：`POST https://dashboard.example.com/olap/query`
 
 请求头：
 ```
-Cookie: xianfu_waimai_ssoid=<value>
+Cookie: <SSO_COOKIE_NAME>=<value>
 Content-Type: application/json
 X-Requested-With: XMLHttpRequest
 ```
@@ -27,17 +27,17 @@ X-Requested-With: XMLHttpRequest
 - `rescode=30001`：ssoid 过期，需重新登录
 - `rescode=10001`：未授权
 
-**探测方式**：URL 含 `ocrm.sankuai.com` 或 `data.ocrm.sankuai.com`
+**探测方式**：URL 含 `dashboard.example.com` 或 `dashboard.example.com`
 
 ---
 
-### 2. data.sankuai.com（通用数据平台）
+### 2. data.example.com（通用数据平台）
 
-**Cookie 域**：`data.sankuai.com`  
+**Cookie 域**：`data.example.com`  
 **Cookie 字段**：`ssoid` 或 `sso_token`  
 **数据接口**：参考看板页面 Network 请求
 
-**探测方式**：URL 含 `data.sankuai.com`
+**探测方式**：URL 含 `data.example.com`
 
 ---
 
@@ -56,7 +56,7 @@ X-Requested-With: XMLHttpRequest
 
 ```bash
 # 通用 SSO 登录（已有脚本）
-/app/skills/room-booking-helper/scripts/sso-login.sh <mis_account>
+<内网>/sso-login.sh <mis_account>
 
 # 然后从 CDP 提取特定域 cookie
 python3 ~/.openclaw/dashboard-reporter/scripts/extract_cookie.py --domain <domain>
@@ -73,7 +73,7 @@ python3 ~/.openclaw/dashboard-reporter/scripts/extract_cookie.py --domain <domai
 | `fin_ord_num` | 消费订单量 | `/ 10000` → 万单 |
 | `fin_actual_amt` | 实收GTV | `/ 10000` → 万元 |
 | `ord_avg_fin_actual_amt` | 实收客单价 | 元，保留2位小数 |
-| `net_mt_disc_rate` | 美补率 | `* 100` → % |
+| `net_mt_disc_rate` | 平台补贴率 | `* 100` → % |
 | `fin_ord_num_last_day_rate` | DoD 环比 | `* 100` → % + 箭头 |
 | `fin_ord_num_last_week_rate` | WoW 周同比 | 同上 |
 | `fin_ord_num_last_year_rate` | YoY 年同比 | 同上 |

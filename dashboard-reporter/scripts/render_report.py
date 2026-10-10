@@ -6,6 +6,9 @@ render_report.py - 通用经营报告渲染脚本（Jinja2 模板引擎）
   python3 render_report.py --config my_report.json --data /tmp/dashboard_data_xxx.json
   python3 render_report.py --config my_report.json  # 自动找数据文件
 
+  # 演示模式（配合 fetch_data.py --from-file 生成的样例数据）
+  python3 render_report.py --config config.example.json --data /tmp/dashboard_data_示例看板日报.json
+
 输出：Markdown 报告写入 /tmp/report_output.txt，打印 [REPORT_READY]
 """
 
@@ -160,6 +163,9 @@ def main():
     parser.add_argument("--config", required=True, help="报告配置文件路径")
     parser.add_argument("--data", help="数据文件路径（fetch_data.py 的输出）")
     parser.add_argument("--output", default="/tmp/report_output.txt", help="输出文件路径")
+    parser.add_argument("--template-dir",
+                        default="~/.openclaw/dashboard-reporter/templates",
+                        help="自定义 Jinja2 模板目录（默认 ~/.openclaw/dashboard-reporter/templates）")
     args = parser.parse_args()
 
     config_path = Path(args.config).expanduser()
@@ -179,7 +185,7 @@ def main():
     
     # 选择模板
     template_name = config.get("template", "default")
-    template_dir = Path("~/.openclaw/dashboard-reporter/templates").expanduser()
+    template_dir = Path(args.template_dir).expanduser()
     template_file = template_dir / f"{template_name}.md.j2"
     
     if template_file.exists():

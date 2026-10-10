@@ -46,9 +46,9 @@ cat > "$BASE_DIR/reports/example.json" << 'EOF'
   "name": "示例看板日报",
   "data_source": {
     "platform": "ocrm",
-    "base_url": "https://data.ocrm.sankuai.com",
-    "cookie_domain": "ocrm.sankuai.com",
-    "cookie_file": "~/.openclaw/dashboard-reporter/cookies/ocrm.sankuai.com.txt",
+    "base_url": "https://dashboard.example.com",
+    "cookie_domain": "dashboard.example.com",
+    "cookie_file": "~/.openclaw/dashboard-reporter/cookies/dashboard.example.com.txt",
     "queries": [
       {
         "name": "overview",

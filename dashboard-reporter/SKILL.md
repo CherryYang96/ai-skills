@@ -1,10 +1,10 @@
 ---
 name: dashboard-reporter
-description: 从美团内网看板阅数（ocrm.sankuai.com、data.sankuai.com 等）自动获取 SSO cookie，拉取 OLAP 数据，调用 LLM subagent 基于知识库生成经营解读（Markdown 格式），发送到指定大象群聊。无 subagent 时自动降级为 Python 模板模式。内含通用外卖经营分析知识库模板（指标口径/归因框架/业务规律）。触发词：自动日报、定时发送经营数据、从看板读数据发群、dashboard-reporter、看板数据发大象、创建日报任务、生成经营解读。
+description: 从内网看板阅数（dashboard.example.com、data.example.com 等）自动获取 SSO cookie，拉取 OLAP 数据，调用 LLM subagent 基于知识库生成经营解读（Markdown 格式），发送到指定大象群聊。无 subagent 时自动降级为 Python 模板模式。内含通用外卖经营分析知识库模板（指标口径/归因框架/业务规律）。触发词：自动日报、定时发送经营数据、从看板读数据发群、dashboard-reporter、看板数据发大象、创建日报任务、生成经营解读。
 
 metadata:
-  skillhub.creator: "yangchengling"
-  skillhub.updater: "yangchengling"
+  skillhub.creator: "<YOUR_MIS_ACCOUNT>"
+  skillhub.updater: "<YOUR_MIS_ACCOUNT>"
   skillhub.version: "V3"
   skillhub.source: "FRIDAY Skillhub"
   skillhub.skill_id: "16002"
@@ -12,62 +12,117 @@ metadata:
 
 # Dashboard Reporter V3
 
-从美团内网看板自动拉取数据，调用墨客（LLM subagent）基于知识库生成经营解读，发送到大象群聊。每日自动归档到案例库，为周报积累数据。
+从内网看板自动拉取数据，调用墨客（LLM subagent）基于知识库生成经营解读，发送到大象群聊。每日自动归档到案例库，为周报积累数据。
 
 ---
 
 ## 整体架构
 
+**内部实例（作者实际在跑的版本，含墨客与大象）**：
+
 ```
 daily_report.py（Python）
-  ├── 1. 读取 SSO Cookie → data.ocrm.sankuai.com OLAPQuery 拉取数据
+  ├── 1. 读取 SSO Cookie → dashboard.example.com OLAPQuery 拉取数据
   ├── 2. 构建结构化数据 JSON + 表格框架（纯数字部分）
   ├── 3. sessions_send → 墨客（label=moke）生成分析文字
   ├── 4. 组装完整 Markdown 日报 → /tmp/daily_report_output.txt
   ├── 5. 归档到 knowledge-base/daily-reports/YYYY-MM-DD.md
-  └── 6. npx @waimai/meituan-local-xm-cli send markdown → 大象群
+  └── 6. npx <internal-im-cli> send markdown → 大象群
+```
+
+**本仓库发布的通用框架（与上面对应的可复用部分）**：
+
+```
+fetch_data.py --config <report>.json        # 读 cookie + 拉 OLAP → /tmp/dashboard_data_<name>.json
+  └── --from-file <sample>.json             # 演示模式：跳过 cookie 与网络，直接用本地样例数据
+
+render_report.py --config <report>.json     # 默认模板 / 自定义 Jinja2 模板
+  └── → /tmp/report_output.txt（Markdown）
+
+（可选）LLM 解读：把数据 JSON 交给你的 agent / subagent，并挂上 knowledge-base 里的口径与归因规则
+（可选）发送：交给平台自带的消息工具，或自行接 webhook
 ```
 
 **关键设计原则**：
-- Python 只负责取数和拼表格，**不写任何分析文字**
-- 分析文字全部由墨客基于知识库生成，LLM 解读质量远优于模板
-- Cookie 失效时通过大象私信告警，等用户手动更新后自动重试
+- 取数脚本只负责取数和拼表格，**不写任何分析文字**
+- 分析文字交给 LLM（内部用墨客）基于知识库生成，解读质量远优于模板；没有 LLM 时自动降级为模板模式
+- Cookie 失效时可告警或打印 `[ALERT]`，等用户手动更新后重试
 
 ---
 
 ## 核心文件路径
 
+> ⚠️ **两套路径要分清**：下面第一张表是**本仓库随 Skill 一起发布的通用框架**（任何人 clone 下来就能用）；
+> 第二张表是**作者在美团内部跑的那套实例**（写死的某特区日报流程），里面的 `daily_report.py`、墨客 session、群 GID 等**不在本仓库内**（具体值已打码），外部环境没有这些文件。
+
+### A. 本仓库提供的文件（通用框架，可离线演示）
+
+| 文件 | 路径 | 说明 |
+|------|------|------|
+| 取数脚本 | `scripts/fetch_data.py` | 按 JSON 配置拉 OLAP / REST 数据，输出 `/tmp/dashboard_data_<name>.json` |
+| 渲染脚本 | `scripts/render_report.py` | 用 Jinja2 模板或内置默认模板渲染 Markdown |
+| Cookie 获取 | `scripts/fetch_cookie.sh` | 为指定域名获取/刷新 SSO cookie（依赖内网 SSO，见「前置条件」） |
+| 初始化 | `scripts/setup.sh` | 建 `~/.openclaw/dashboard-reporter/` 目录并生成示例配置 |
+| 演示配置 | `scripts/config.example.json` | 离线演示用的报告配置 |
+| 演示数据 | `scripts/sample_data.example.json` | 虚构样例数据，不含任何真实业务数据 |
+| 知识库模板 | `knowledge-base-templates/*.md` | 指标口径 / 解读规则与归因 / 业务规律，需替换占位符 |
+| 参考文档 | `references/data-sources.md`、`references/template-guide.md` | 数据源适配与模板写法 |
+
+### B. 内部实例路径（仅供参考，仓库内没有这些文件）
+
 | 文件 | 路径 |
 |------|------|
 | 主脚本 | `~/.openclaw/workspace/scripts/daily_report.py` |
+| 看板 OLAP 请求体模板 | `~/.openclaw/workspace/memory/*_olap_body_template.json`（打码，示例） |
 | Cookie 文件 | `~/.openclaw/workspace/scripts/ocrm_cookie.txt`（只存 ssoid 值） |
-| 杭州 OLAP 请求体模板 | `~/.openclaw/workspace/memory/ocrm_olap_body_template.json` |
-| 全国 OLAP 请求体模板 | `~/.openclaw/workspace/memory/national_olap_body_template.json` |
-| 细分维度请求体模板 | `~/.openclaw/workspace/memory/subdivision_body_templates.json` |
+| 细分维度请求体模板 | `~/.openclaw/workspace/memory/*_body_templates.json`（打码，示例） |
 | 案例库目录 | `~/.openclaw/workspace/knowledge-base/daily-reports/` |
 | 案例库索引 | `~/.openclaw/workspace/knowledge-base/04-案例库.md` |
 | 临时输出 | `/tmp/daily_report_output.txt`（每次重新生成，不持久）|
 
 ---
 
-## 定时任务配置
+## 前置条件（重要：这个 Skill 不能"装完就跑"）
 
-- **Cron Job ID**：`a682bfc9-0594-4643-85e8-6175c9b7af13`
+| 依赖 | 是否必需 | 说明 |
+|------|---------|------|
+| 内网看板域名 | 生产必需 | 默认 `*.example.com`（阅数/OCRM）；换其他数据源需改 `config.data_source` |
+| SSO Cookie | 生产必需 | `<SSO_COOKIE_NAME>` 的值；也可手动 F12 复制后写入 cookie 文件 |
+| 内网 SSO 登录能力 | 生产必需 | `fetch_cookie.sh` 依赖同环境的 `sso-login.sh` 与本地 9222 端口 CDP，非内网用户请手动提供 cookie |
+| Python 3 | 必需 | 仅标准库即可跑通；装了 `jinja2` 可用自定义模板，装了 `websocket-client` 才能自动取 cookie |
+| 墨客（LLM subagent） | 可选 | 有则生成 LLM 解读；没有则自动降级为模板渲染 |
+| 大象群发送 | 可选 | 需要内部 CLI `<internal-im-cli>`；没有则只产出 Markdown 文件 |
+
+**离线验证（不需要任何内网权限）**：
+
+```bash
+cd dashboard-reporter/scripts
+python3 fetch_data.py   --config config.example.json --from-file sample_data.example.json --output /tmp/demo_data.json
+python3 render_report.py --config config.example.json --data /tmp/demo_data.json --output /tmp/demo_report.md
+cat /tmp/demo_report.md
+```
+
+预期输出：一张「核心数据概览」Markdown 表格 + `[DATA_READY]` / `[REPORT_READY]` 两行标记。
+
+---
+
+## 定时任务配置（内部实例，示例）
+
 - **触发时间**：每天北京时间 11:00（UTC 03:00）
 - **Schedule**：`0 11 * * * @ Asia/Shanghai`
-- **测试群 GID**：`70454604015`
-- **正式群 GID**：`69793911869`
-- **执行命令**：`python3 ~/.openclaw/workspace/scripts/daily_report.py`
+- **测试群 / 正式群**：`<TEST_GID>` / `<PROD_GID>`（具体值已打码）
+- **Cron Job ID**：`<CRON_JOB_ID>`（具体值已打码）
+- **执行命令**：`python3 ~/.openclaw/workspace/scripts/daily_report.py`（该文件不在本仓库，用 `fetch_data.py` + `render_report.py` 替代即可）
 
 ---
 
 ## 数据源
 
-- **平台**：`data.ocrm.sankuai.com`（阅数/OCRM）
-- **接口**：`POST /igate/mapinsight/dashBoard/v2/OLAPQuery?ssoprotect=1&...`
-- **认证**：Cookie `xianfu_waimai_ssoid=<value>`
+- **平台**：内部阅数/OCRM 看板（`https://data.ocrm.<内部域名>`，已打码）
+- **接口**：`POST /<internal>/OLAPQuery`
+- **认证**：Cookie `<SSO_COOKIE_NAME>=<value>`（内部 cookie 名已打码）
 - **拉取维度**（共 7 个请求）：
-  1. 杭州特区总览（`map_second_district=330100`）
+  1. 特区总览（城市编码已打码）
   2. 全国直营白领总览（无城市过滤）
   3. 品类细分（美食 / 甜点 / 饮品）
   4. 商家类型细分（城市商家 / 区域KA / 全国KA）
@@ -106,11 +161,11 @@ reply = resp["result"]["details"]["reply"]
 
 ```bash
 # 发送命令
-npx @waimai/meituan-local-xm-cli send markdown --gid <gid> --json -- "<内容>"
+npx <internal-im-cli> send markdown --gid <gid> --json -- "<内容>"
 
 # 成功判断：ok=true 且 status="confirmed"
 # status="queued" = session 断开，需 login 后重试
-# login 命令：npx @waimai/meituan-local-xm-cli login --timeout-sec 60 --json
+# login 命令：npx <internal-im-cli> login --timeout-sec 60 --json
 ```
 
 **重要**：只有 `confirmed` + `msgId` 才算真正送达，`queued` 视为失败需重试。
@@ -119,7 +174,7 @@ npx @waimai/meituan-local-xm-cli send markdown --gid <gid> --json -- "<内容>"
 
 ## Cookie 管理
 
-Cookie 只需存储 `xianfu_waimai_ssoid` 的值（不含 key 名）：
+Cookie 只需存储 `<SSO_COOKIE_NAME>` 的值（不含 key 名）：
 
 ```bash
 echo "<ssoid值>" > ~/.openclaw/workspace/scripts/ocrm_cookie.txt
@@ -127,7 +182,7 @@ echo "<ssoid值>" > ~/.openclaw/workspace/scripts/ocrm_cookie.txt
 
 **Cookie 失效处理流程**（脚本自动执行）：
 1. 检测到 HTTP 401 或 `rescode=10001/10003`
-2. 大象私信告警杨同学，提示登录 `https://data.ocrm.sankuai.com` 后 F12 → Application → Cookies 复制 `xianfu_waimai_ssoid`
+2. 大象私信告警杨同学，提示登录 `https://dashboard.example.com` 后 F12 → Application → Cookies 复制 `<SSO_COOKIE_NAME>`
 3. 用户更新 cookie 文件后，下次定时任务自动恢复
 
 若需立即重跑：
@@ -150,13 +205,13 @@ python3 ~/.openclaw/workspace/scripts/daily_report.py
 ## 日报格式（V6 Markdown）
 
 ```
-### 📊 杭州特区直营日报 · YYYY/MM/DD
+### 📊 某特区直营日报 · YYYY/MM/DD
 
 #### 🔑 核心结论
 （3条加粗结论 + ⚠️ 持续跟踪项）
 
 #### 📦 经营规模
-（文字叙述 + 杭州特区表格 + 全国基准表格）
+（文字叙述 + 某特区表格 + 全国基准表格）
 
 #### 👤 流量及用户
 （文字叙述 + 用户分层表格）
@@ -199,21 +254,23 @@ grep -rn "\[示例值\|\[请\|\[目标城市\]" knowledge-base/
 
 ---
 
-## 降级模式（无 subagent 时自动生效）
+## 降级模式（无 LLM 时自动生效）
 
-若未配置 LLM subagent（`MOKE_SESSION_KEY` 为空或调用失败），脚本自动降级为 **Python 模板模式**：
+不接 LLM subagent 时，流程自动降级为 **模板渲染模式**：
 
-- 使用内置 Jinja2 模板生成固定格式报告
+- `render_report.py` 使用内置默认模板（或 `~/.openclaw/dashboard-reporter/templates/<name>.md.j2`）生成固定格式报告
 - 只含数据表格和简单文字说明，无深度归因解读
 - 所有数字正常展示，发送流程不受影响
 
-**配置 subagent**（可选，开启 LLM 解读）：
-```python
-# 在 daily_report.py 顶部配置区修改：
-MOKE_SESSION_KEY = "agent:moke:main"  # 你的 LLM subagent session key
-# 留空则自动降级：
-# MOKE_SESSION_KEY = ""
+**离线自测**（验证取数→渲染链路，不需要内网）：
+
+```bash
+python3 fetch_data.py    --config config.example.json --from-file sample_data.example.json --output /tmp/demo_data.json
+python3 render_report.py --config config.example.json --data /tmp/demo_data.json --output /tmp/demo_report.md
 ```
+
+**接你自己的 LLM**（可选，开启解读）：
+把取数输出（`/tmp/dashboard_data_*.json`）连同 `knowledge-base/01~03` 的口径与归因规则交给任意 agent / subagent，让它产出解读文字，再拼到模板报告前面即可；内部实例用的 session key 配置（`MOKE_SESSION_KEY`）属于作者内网环境，不在本仓库。
 
 ---
 
@@ -223,8 +280,8 @@ MOKE_SESSION_KEY = "agent:moke:main"  # 你的 LLM subagent session key
 
 1. **收集配置**：看板 URL、发送时间（北京时间）、目标群 GID
 2. **获取 Cookie**：引导用户登录看板，F12 复制 ssoid，写入对应 cookie 文件
-3. **调试取数**：直接运行脚本，确认数据正常
-4. **测试发送**：先发测试群（`--test-only` 参数），等用户确认
+3. **调试取数**：先跑 `fetch_data.py --config ...` 确认数据正常，再跑 `render_report.py` 确认排版
+4. **测试发送**：只发测试群，等用户确认（发送步骤按平台自带的消息工具实现）
 5. **创建定时任务**：`openclaw cron add`，确认时间和命令
 6. **正式运行**：首次定时触发后确认送达
 
